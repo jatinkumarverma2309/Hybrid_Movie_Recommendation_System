@@ -6,7 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import './index.css';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const COLORS = ['#E50914', '#b81d24', '#ff4b4b', '#ff7b7b', '#ffaaaa', '#ffffff', '#cccccc', '#999999', '#666666', '#333333'];
 
 const MovieCard = ({ movie, onClick, onToggleWatchlist, onToggleFavorite, isWatchlist, isFavorite }) => {
