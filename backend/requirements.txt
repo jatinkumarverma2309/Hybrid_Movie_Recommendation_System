@@ -1,0 +1,17 @@
+pandas==3.0.3
+requests==2.34.2
+python-dotenv==1.2.2
+scikit-learn
+scikit-surprise
+matplotlib
+seaborn
+fastapi
+uvicorn
+google-auth
+psycopg2-binary
+google-generativeai
+bcrypt
+PyJWT
+python-multipart
+rapidfuzz  
+ 

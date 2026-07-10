@@ -1,0 +1,26 @@
+# Environments
+.env
+.env.*
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data and Models
+*.sqlite3
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
