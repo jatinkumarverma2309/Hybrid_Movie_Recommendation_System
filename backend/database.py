@@ -6,10 +6,31 @@ load_dotenv()
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
+from psycopg2 import pool
+
+db_pool = None
+if DATABASE_URL:
+    try:
+        db_pool = pool.ThreadedConnectionPool(1, 20, DATABASE_URL)
+    except Exception as e:
+        print(f"Error creating connection pool: {e}")
+
+class PooledConnection:
+    def __init__(self):
+        if not db_pool:
+            raise ValueError("DATABASE_URL environment variable is not set or pool failed to initialize.")
+        self.conn = db_pool.getconn()
+    def cursor(self, *args, **kwargs):
+        return self.conn.cursor(*args, **kwargs)
+    def commit(self):
+        self.conn.commit()
+    def rollback(self):
+        self.conn.rollback()
+    def close(self):
+        db_pool.putconn(self.conn)
+
 def get_db_connection():
-    if not DATABASE_URL:
-        raise ValueError("DATABASE_URL environment variable is not set. Please set it in .env file (e.g., DATABASE_URL=postgresql://user:password@localhost:5432/dbname).")
-    return psycopg2.connect(DATABASE_URL)
+    return PooledConnection()
 
 def init_db():
     conn = get_db_connection()
