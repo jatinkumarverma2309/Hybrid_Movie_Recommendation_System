@@ -540,6 +540,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
   const USER_ID = user.sub;
   const [trendingMovies, setTrendingMovies] = useState([]);
   const [latestMovies, setLatestMovies] = useState([]);
+  const [personalizedMovies, setPersonalizedMovies] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
   const [moodResults, setMoodResults] = useState([]);
   
@@ -618,12 +619,14 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
     setSelectedMovie(null);
     setActiveMood(null);
     try {
-      const [popRes, latRes] = await Promise.all([
+      const [popRes, latRes, personalRes] = await Promise.all([
         axios.get(`${API_BASE}/movies/popular?limit=20`),
-        axios.get(`${API_BASE}/movies/latest?limit=20`)
+        axios.get(`${API_BASE}/movies/latest?limit=20`),
+        axios.get(`${API_BASE}/recommend/collaborative?user_id=${USER_ID}&limit=20`)
       ]);
       setTrendingMovies(popRes.data);
       setLatestMovies(latRes.data);
+      setPersonalizedMovies(personalRes.data);
       setError(null);
     } catch (err) {
       setError('Could not connect to the recommendation API. Is the backend running?');
@@ -925,6 +928,9 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
               <MovieRow title={`${activeMood} Movies`} movies={moodResults} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
             ) : (
               <>
+                {personalizedMovies && personalizedMovies.length > 0 && (
+                  <MovieRow title="Recommended For You" movies={personalizedMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
+                )}
                 <MovieRow title="Trending Now" movies={trendingMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
                 <MovieRow title="Latest Releases" movies={latestMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
               </>
