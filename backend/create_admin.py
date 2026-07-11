@@ -1,7 +1,11 @@
+import os
 import psycopg2
 import uuid
+from dotenv import load_dotenv
 
-conn = psycopg2.connect('postgresql://postgres:MySQL123@localhost:5432/hybrid_movie_recommender')
+load_dotenv()
+database_url = os.environ.get('DATABASE_URL', 'postgresql://postgres:MySQL123@localhost:5432/hybrid_movie_recommender')
+conn = psycopg2.connect(database_url)
 cur = conn.cursor()
 
 # Delete if exists
