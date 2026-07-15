@@ -238,6 +238,31 @@ def create_native_user(user_id, email, password_hash, name, is_admin=False):
         cursor.close()
         conn.close()
 
+def get_or_create_google_user(google_sub, email, name, profile_picture_url):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        if email:
+            cursor.execute('SELECT user_id, is_admin FROM users WHERE email = %s', (email,))
+            row = cursor.fetchone()
+            if row:
+                return row[0], row[1]
+                
+        cursor.execute('SELECT user_id, is_admin FROM users WHERE user_id = %s', (google_sub,))
+        row = cursor.fetchone()
+        if row:
+            return row[0], row[1]
+            
+        cursor.execute('''
+            INSERT INTO users (user_id, email, name, profile_picture_url) 
+            VALUES (%s, %s, %s, %s)
+        ''', (google_sub, email, name, profile_picture_url))
+        conn.commit()
+        return google_sub, False
+    finally:
+        cursor.close()
+        conn.close()
+
 def log_search(user_id, query):
     conn = get_db_connection()
     cursor = conn.cursor()

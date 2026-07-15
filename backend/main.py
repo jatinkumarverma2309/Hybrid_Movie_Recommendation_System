@@ -121,7 +121,16 @@ def verify_token(data: TokenData):
             
         # Verify the token using Google's library
         user_info = id_token.verify_oauth2_token(data.token, google_requests.Request())
-        return {"user_id": user_info['sub'], "email": user_info.get('email')}
+        
+        # Ensure the user exists in our database
+        user_id, is_admin = db.get_or_create_google_user(
+            user_info['sub'], 
+            user_info.get('email'), 
+            user_info.get('name'), 
+            user_info.get('picture')
+        )
+        
+        return {"user_id": user_id, "email": user_info.get('email'), "name": user_info.get('name'), "picture": user_info.get('picture'), "is_admin": is_admin}
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid token")
     

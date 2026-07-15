@@ -1051,7 +1051,28 @@ const Sidebar = ({ currentView, setCurrentView, onDiscover, onWatchlist, onFavor
 };
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('movie_user');
+    if (savedUser) {
+      try {
+        return JSON.parse(savedUser);
+      } catch(e) {
+        localStorage.removeItem('movie_user');
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const handleSetUser = (userData) => {
+    setUser(userData);
+    if (userData) {
+      localStorage.setItem('movie_user', JSON.stringify(userData));
+    } else {
+      localStorage.removeItem('movie_user');
+    }
+  };
+
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isAdminPortal, setIsAdminPortal] = useState(false);
   const [email, setEmail] = useState('');
@@ -1084,7 +1105,7 @@ function App() {
       
       const decoded = jwtDecode(res.data.token);
       // We pass the is_admin flag from the response payload directly to user state so AdminApp renders immediately
-      setUser({ ...decoded, is_admin: res.data.user.is_admin });
+      handleSetUser({ ...decoded, is_admin: res.data.user.is_admin });
     } catch (err) {
       setAuthError(err.response?.data?.detail || 'Authentication failed');
     }
@@ -1154,7 +1175,8 @@ function App() {
                       const res = await axios.post(`${API_BASE}/auth/verify`, { token: credentialResponse.credential });
                       // Note: Google users currently default to non-admin, so this bypasses admin check. 
                       // This is fine since it's hidden during Admin Portal login.
-                      setUser({ ...jwtDecode(credentialResponse.credential), is_admin: res.data.is_admin });
+                      const decoded = jwtDecode(credentialResponse.credential);
+                      handleSetUser({ ...decoded, sub: res.data.user_id, is_admin: res.data.is_admin });
                     } catch(err) {
                       setAuthError('Google sign in failed');
                     }
@@ -1182,10 +1204,10 @@ function App() {
   // Route entirely to AdminApp if logged into Admin Portal (or if user is admin and specifically wants Admin portal)
   // Actually, if they are verified as admin and isAdminPortal was checked, route to AdminApp
   if (isAdminPortal && user.is_admin) {
-    return <AdminApp user={user} onLogout={() => { googleLogout(); setUser(null); }} toggleTheme={() => setIsLightMode(!isLightMode)} isLightMode={isLightMode} />;
+    return <AdminApp user={user} onLogout={() => { googleLogout(); handleSetUser(null); }} toggleTheme={() => setIsLightMode(!isLightMode)} isLightMode={isLightMode} />;
   }
 
-  return <MainApp user={user} onLogout={() => { googleLogout(); setUser(null); }} toggleTheme={() => setIsLightMode(!isLightMode)} isLightMode={isLightMode} />;
+  return <MainApp user={user} onLogout={() => { googleLogout(); handleSetUser(null); }} toggleTheme={() => setIsLightMode(!isLightMode)} isLightMode={isLightMode} />;
 }
 
 export default App;
