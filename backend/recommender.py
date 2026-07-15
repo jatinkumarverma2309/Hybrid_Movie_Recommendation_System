@@ -71,10 +71,14 @@ class RecommenderSystem:
             pred = self.svd_model.predict(user_id, m_id)
             predictions.append((m_id, pred.est))
             
+        import random
         predictions.sort(key=lambda x: x[1], reverse=True)
-        top_movie_ids = [x[0] for x in predictions[:top_n]]
+        top_100_movie_ids = [x[0] for x in predictions[:100]]
         
-        return self.movies_df[self.movies_df['movieId'].isin(top_movie_ids)].to_dict('records')
+        # Refresh by sampling
+        sampled_ids = random.sample(top_100_movie_ids, min(top_n, len(top_100_movie_ids)))
+        
+        return self.movies_df[self.movies_df['movieId'].isin(sampled_ids)].to_dict('records')
 
     def get_hybrid_recommendations(self, user_id, movie_id=None, top_n=10):
         if not movie_id:

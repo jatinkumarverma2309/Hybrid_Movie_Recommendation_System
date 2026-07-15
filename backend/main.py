@@ -191,14 +191,22 @@ def search_movies(q: str = Query(..., min_length=2), limit: int = 10):
     
     return clean_results(results)
     
+@app.get("/movies/trending", response_model=List[Movie])
+def trending_movies(limit: int = 20):
+    rec = get_recommender()
+    if rec.movies_df is None:
+        raise HTTPException(status_code=503, detail="Models not loaded")
+    # Fixed list for trending movies
+    return clean_results(rec.movies_df.tail(limit))
+
 @app.get("/movies/popular", response_model=List[Movie])
 def popular_movies(limit: int = 20):
     rec = get_recommender()
     if rec.movies_df is None:
         raise HTTPException(status_code=503, detail="Models not loaded")
         
-    # The newly injected trending movies are at the end of the dataset
-    return clean_results(rec.movies_df.tail(100).sample(limit))
+    # Refresh popular movies by sampling from the entire dataset
+    return clean_results(rec.movies_df.sample(limit))
 
 @app.get("/movies/latest", response_model=List[Movie])
 def latest_movies(limit: int = 20):

@@ -539,6 +539,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
   const [user, setUser] = useState(initialUser);
   const USER_ID = user.sub;
   const [trendingMovies, setTrendingMovies] = useState([]);
+  const [popularMovies, setPopularMovies] = useState([]);
   const [latestMovies, setLatestMovies] = useState([]);
   const [personalizedMovies, setPersonalizedMovies] = useState([]);
   const [searchResults, setSearchResults] = useState([]);
@@ -554,6 +555,29 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
   const [currentView, setCurrentView] = useState('discover'); 
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [extendedDetails, setExtendedDetails] = useState({});
+
+  const navigateTo = (view, movie = null) => {
+    setCurrentView(view);
+    setSelectedMovie(movie);
+    window.history.pushState({ currentView: view, selectedMovie: movie }, "");
+  };
+
+  useEffect(() => {
+    const handlePopState = (event) => {
+      if (event.state) {
+        setCurrentView(event.state.currentView || 'discover');
+        setSelectedMovie(event.state.selectedMovie || null);
+      } else {
+        setCurrentView('discover');
+        setSelectedMovie(null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    if (!window.history.state) {
+      window.history.replaceState({ currentView: 'discover', selectedMovie: null }, "");
+    }
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     if (selectedMovie && selectedMovie.tmdbId) {
@@ -615,16 +639,17 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
 
   const fetchDiscoverData = async () => {
     setLoading(true);
-    setCurrentView('discover');
-    setSelectedMovie(null);
+    navigateTo('discover', null);
     setActiveMood(null);
     try {
-      const [popRes, latRes, personalRes] = await Promise.all([
+      const [trendRes, popRes, latRes, personalRes] = await Promise.all([
+        axios.get(`${API_BASE}/movies/trending?limit=20`),
         axios.get(`${API_BASE}/movies/popular?limit=20`),
         axios.get(`${API_BASE}/movies/latest?limit=20`),
         axios.get(`${API_BASE}/recommend/collaborative?user_id=${USER_ID}&limit=20`)
       ]);
-      setTrendingMovies(popRes.data);
+      setTrendingMovies(trendRes.data);
+      setPopularMovies(popRes.data);
       setLatestMovies(latRes.data);
       setPersonalizedMovies(personalRes.data);
       setError(null);
@@ -644,14 +669,13 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
     }
     
     setLoading(true);
-    setCurrentView('search');
-    setSelectedMovie(null);
+    navigateTo('search', null);
     try {
       // Log search
       await axios.post(`${API_BASE}/track/search`, { user_id: USER_ID, query });
       fetchSearchHistory(); // update history
       
-      const res = await axios.get(`${API_BASE}/movies/search?q=${query}&limit=20`);
+      const res = await axios.get(`${API_BASE}/movies/search?q=${query}&limit=100`);
       setSearchResults(res.data);
       setSortBy('default');
       setError(null);
@@ -682,8 +706,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
 
   const fetchListMovies = async (endpoint, viewName) => {
     setLoading(true);
-    setCurrentView(viewName);
-    setSelectedMovie(null);
+    navigateTo(viewName, null);
     try {
       const res = await axios.get(`${API_BASE}/${endpoint}?user_id=${USER_ID}`);
       setSearchResults(res.data);
@@ -697,7 +720,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
   };
 
   const handleMovieClick = async (movie) => {
-    setSelectedMovie(movie);
+    navigateTo(currentView, movie);
     try {
       await axios.post(`${API_BASE}/track/view`, { user_id: USER_ID, movie_id: movie.movieId });
     } catch(err) {}
@@ -733,8 +756,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
 
   const getRecommendations = async (movie) => {
     setLoading(true);
-    setCurrentView('search');
-    setSelectedMovie(null);
+    navigateTo('search', null);
     setSearchQuery('');
     try {
       await axios.post(`${API_BASE}/track/recommend`, { user_id: USER_ID, rec_type: 'hybrid' });
@@ -775,10 +797,10 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
     
     return (
       <div className="app-layout">
-        <Sidebar currentView={currentView} setCurrentView={setCurrentView} onDiscover={fetchDiscoverData} onWatchlist={() => fetchListMovies('watchlist', 'watchlist')} onFavorites={() => fetchListMovies('favorites', 'favorites')} user={user} customProfileUrl={customProfileUrl} profileData={profileData} onLogout={onLogout} toggleTheme={toggleTheme} isLightMode={isLightMode} />
+        <Sidebar currentView={currentView} setCurrentView={(view) => navigateTo(view, null)} onDiscover={fetchDiscoverData} onWatchlist={() => fetchListMovies('watchlist', 'watchlist')} onFavorites={() => fetchListMovies('favorites', 'favorites')} user={user} customProfileUrl={customProfileUrl} profileData={profileData} onLogout={onLogout} toggleTheme={toggleTheme} isLightMode={isLightMode} />
         
         <main className="main-content details-page">
-          <button className="back-btn" onClick={() => setSelectedMovie(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '2rem' }}>
+          <button className="back-btn" onClick={() => window.history.back()} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '2rem' }}>
             <ArrowLeft size={20} /> Back
           </button>
           
@@ -862,7 +884,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
 
   return (
     <div className="app-layout">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} onDiscover={fetchDiscoverData} onWatchlist={() => fetchListMovies('watchlist', 'watchlist')} onFavorites={() => fetchListMovies('favorites', 'favorites')} user={user} customProfileUrl={customProfileUrl} profileData={profileData} onLogout={onLogout} toggleTheme={toggleTheme} isLightMode={isLightMode} />
+      <Sidebar currentView={currentView} setCurrentView={(view) => navigateTo(view, null)} onDiscover={fetchDiscoverData} onWatchlist={() => fetchListMovies('watchlist', 'watchlist')} onFavorites={() => fetchListMovies('favorites', 'favorites')} user={user} customProfileUrl={customProfileUrl} profileData={profileData} onLogout={onLogout} toggleTheme={toggleTheme} isLightMode={isLightMode} />
       
       <main className="main-content">
         <header>
@@ -932,6 +954,7 @@ function MainApp({ user: initialUser, onLogout, toggleTheme, isLightMode }) {
                   <MovieRow title="Recommended For You" movies={personalizedMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
                 )}
                 <MovieRow title="Trending Now" movies={trendingMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
+                <MovieRow title="Popular" movies={popularMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
                 <MovieRow title="Latest Releases" movies={latestMovies} onMovieClick={handleMovieClick} onToggleWatchlist={toggleWatchlist} onToggleFavorite={toggleFavorite} watchlist={watchlist} favorites={favorites} />
               </>
             )}
@@ -978,7 +1001,7 @@ const Sidebar = ({ currentView, setCurrentView, onDiscover, onWatchlist, onFavor
   
   return (
     <div className="sidebar">
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: '2rem', paddingLeft: '0.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: '2rem', paddingLeft: '0.5rem', cursor: 'pointer' }} onClick={onDiscover}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
           <div className="logo-mm" style={{ fontSize: '2.5rem', letterSpacing: '-3px', marginRight: '-3px' }}>MM</div>
           <div style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 5px rgba(255, 223, 0, 0.4))' }}>🍿</div>
