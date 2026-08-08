@@ -14,6 +14,7 @@ import uuid
 import shutil
 import bcrypt
 import jwt
+import threading
 from rapidfuzz import process, fuzz, utils
 
 import database as db
@@ -51,10 +52,10 @@ class Movie(BaseModel):
 
 @app.on_event("startup")
 async def startup_event():
-    # Initialize recommender (loads models)
-    get_recommender()
     # Initialize database
     db.init_db()
+    # Initialize recommender in the background so it doesn't block startup
+    threading.Thread(target=get_recommender, daemon=True).start()
 
 # Mount uploads directory for static serving
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")

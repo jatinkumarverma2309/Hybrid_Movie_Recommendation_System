@@ -110,10 +110,15 @@ class RecommenderSystem:
         
         return self.movies_df.iloc[top_indices].to_dict('records')
 
+import threading
+
 recommender = None
+_recommender_lock = threading.Lock()
 
 def get_recommender():
     global recommender
     if recommender is None:
-        recommender = RecommenderSystem()
+        with _recommender_lock:
+            if recommender is None:
+                recommender = RecommenderSystem()
     return recommender
